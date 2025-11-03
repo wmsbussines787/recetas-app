@@ -1,3 +1,4 @@
+// pages/recetas.tsx
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
@@ -44,12 +45,12 @@ export default function RecetasPage() {
     return list;
   }, [data, q, activeTag]);
 
-  const S: React.CSSProperties = { fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto", padding: 24, background: "#0b0b0c", minHeight: "100vh", color: "#e8eaed" };
+  const S: React.CSSProperties = { fontFamily: "Inter, system-ui, -apple-system", padding: 24, background: "#0b0b0c", minHeight: "100vh", color: "#e8eaed" };
   const Shell: React.CSSProperties = { maxWidth: 1100, margin: "0 auto" };
   const H1: React.CSSProperties = { fontSize: 32, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 };
   const Sub: React.CSSProperties = { opacity: 0.7, marginBottom: 16 };
   const Row: React.CSSProperties = { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", margin: "12px 0 20px" };
-  const Input: React.CSSProperties = { flex: 1, minWidth: 240, padding: "10px 12px", borderRadius: 12, border: "1px solid #2a2a2e", background: "#121214", color: "#e8eaed", outline: "none" };
+  const Input: React.CSSProperties = { flex: 1, minWidth: 240, padding: "10px 12px", borderRadius: 12, border: "1px solid #2a2a2e", background: "#121214", color: "#e8eaed" };
   const Button: React.CSSProperties = { padding: "10px 14px", borderRadius: 12, border: "1px solid #2a2a2e", background: "#16161a", color: "#e8eaed", textDecoration: "none" };
 
   const Tag = ({ t }: { t: string }) => (
@@ -63,7 +64,6 @@ export default function RecetasPage() {
         color: activeTag === t ? "#cde1ff" : "#e8eaed",
         cursor: "pointer"
       }}
-      aria-pressed={activeTag === t}
     >
       #{t}
     </button>
@@ -74,81 +74,55 @@ export default function RecetasPage() {
   const Img: React.CSSProperties = { width: "100%", aspectRatio: "16/10", objectFit: "cover", background: "#0f0f10" };
   const Body: React.CSSProperties = { padding: 14, display: "flex", flexDirection: "column", gap: 8 };
   const Title: React.CSSProperties = { fontSize: 18, fontWeight: 700, lineHeight: 1.2 };
-  const Meta: React.CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", opacity: 0.8, fontSize: 13 };
-  const Chip: React.CSSProperties = { border: "1px solid #2a2a2e", borderRadius: 999, padding: "2px 8px" };
 
   return (
     <main style={S}>
       <div style={Shell}>
-        <header>
-          <h1 style={H1}>Recetas</h1>
-          <div style={Sub}>Busca, filtra por tags y abre el formulario para crear nuevas.</div>
-          <div style={Row}>
-            <input
-              style={Input}
-              placeholder="Buscar por título, descripción, tag o slug…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <Link href="/new" style={Button}>➕ Nueva receta</Link>
-            <button onClick={() => { setQ(""); setActiveTag(null); mutate(); }} style={Button}>↻ Refrescar</button>
-          </div>
-          {allTags.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {allTags.map((t) => <Tag key={t} t={t} />)}
-              {activeTag && (
-                <button onClick={() => setActiveTag(null)} style={{ ...Button, padding: "6px 10px" }}>Quitar filtro</button>
-              )}
-            </div>
-          )}
-        </header>
+        <h1 style={H1}>Recetas</h1>
+        <div style={Sub}>Busca, filtra y crea nuevas recetas fácilmente.</div>
 
-        {isLoading && <p>⏳ Cargando recetas…</p>}
-        {error && <p style={{ color: "#ff6b6b" }}>Error cargando recetas.</p>}
+        <div style={Row}>
+          <input
+            style={Input}
+            placeholder="Buscar por nombre, descripción o tag…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <Link href="/new" style={Button}>➕ Nueva receta</Link>
+          <button onClick={() => { setQ(""); setActiveTag(null); mutate(); }} style={Button}>↻ Refrescar</button>
+        </div>
 
-        {!isLoading && !error && (
-          filtered.length ? (
-            <section style={Grid}>
-              {filtered.map((r) => (
-                <article key={r.slug} style={Card}>
-                  <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ display: "block" }}>
-  <img
-    src={r.image_url || `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/800/500`}
-    alt={r.title}
-    style={Img}
-    loading="lazy"
-  />
-</Link>
-                  <div style={Body}>
-                    <div style={Title}>
-  <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ color: "inherit", textDecoration: "none" }}>
-    {r.title}
-  </Link>
-</div>
-                    {r.description && <p style={{ opacity: 0.85, fontSize: 14 }}>{r.description}</p>}
-                    <div style={Meta}>
-                      {typeof r.time_total === "number" && <span style={Chip}>⏱ {r.time_total} min</span>}
-                      {typeof r.servings === "number" && <span style={Chip}>🍽 {r.servings} porciones</span>}
-                      {r.nutrition?.kcal !== undefined && <span style={Chip}>🔥 {r.nutrition.kcal} kcal</span>}
-                    </div>
-                    {r.tags && r.tags.length > 0 && (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {r.tags.map((t) => (
-                          <span key={t} style={{ ...Chip, opacity: 0.9 }}>#{t}</span>
-                        ))}
-                      </div>
-                    )}
-                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                      {r.video_url && <a href={r.video_url} target="_blank" rel="noreferrer" style={Button}>▶️ Video</a>}
-                      <a href={`/api/recipes?slug=${encodeURIComponent(r.slug)}`} target="_blank" rel="noreferrer" style={Button}>JSON</a>
-                    </div>
+        {!isLoading && !error && filtered.length > 0 && (
+          <section style={Grid}>
+            {filtered.map((r) => (
+              <article key={r.slug} style={Card}>
+                <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ display: "block" }}>
+                  <img
+                    src={r.image_url || `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/800/500`}
+                    alt={r.title}
+                    style={Img}
+                    loading="lazy"
+                  />
+                </Link>
+
+                <div style={Body}>
+                  <div style={Title}>
+                    <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ color: "inherit", textDecoration: "none" }}>
+                      {r.title}
+                    </Link>
                   </div>
-                </article>
-              ))}
-            </section>
-          ) : (
-            <div style={{ opacity: 0.8, padding: "24px 0" }}>No hay recetas que coincidan. Crea una en <Link href="/new">/new</Link>.</div>
-          )
+
+                  {r.description && <p style={{ opacity: 0.85, fontSize: 14 }}>{r.description}</p>}
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
+
+        {!isLoading && !error && filtered.length === 0 && (
+          <div style={{ opacity: 0.8, padding: "24px 0" }}>
+            No hay recetas que coincidan. Crea una en <Link href="/new">/new</Link>.
+          </div>
         )}
       </div>
     </main>
