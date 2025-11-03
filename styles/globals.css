@@ -1,0 +1,39 @@
+:root{
+  --bg:#0b0b0c; --fg:#e8eaed; --muted:#9aa0a6; --card:#111113; --border:#222328; --chip:#2a2a2e; --accent:#3b82f6;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#fafafa; --fg:#111; --muted:#555; --card:#fff; --border:#e5e7eb; --chip:#e5e7eb; --accent:#2563eb;
+    --shadow: 0 10px 30px rgba(0,0,0,.12);
+  }
+}
+html,body,#__next{height:100%}
+body{margin:0;font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;background:var(--bg);color:var(--fg);}
+*{box-sizing:border-box}
+
+/* contenedor base */
+.app-shell{min-height:100%; padding-bottom: 84px;} /* espacio para navbar */
+
+/* navbar */
+.navbar{
+  position: fixed; left:0; right:0; bottom: 12px;
+  margin: 0 auto; max-width: 960px;
+  display:flex; gap:10px; justify-content: space-between; align-items:center;
+  padding: 10px; border: 1px solid var(--border); border-radius: 16px;
+  background: rgba(20,20,22,.8); backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+@media (prefers-color-scheme: light){ .navbar{ background: rgba(255,255,255,.8);} }
+
+.navbtn{
+  flex:1; text-align:center; text-decoration:none; color:var(--fg);
+  border:1px solid var(--chip); border-radius: 12px; padding:10px 8px;
+  background: var(--card);
+}
+.navbtn:hover{ filter: brightness(1.05); }
+
+/* helpers */
+.container{max-width:1100px;margin:0 auto;padding:24px}
+.h1{font-size:32px;font-weight:800;letter-spacing:-.3px;margin:0 0 8px}
+.sub{opacity:.75;margin: 0 0 16px}
