@@ -5,7 +5,9 @@ import Navbar from '../components/Navbar';
 export default function MyApp({ Component, pageProps }: AppProps) {
   return (
     <div className="app-shell">
-      <Component {...pageProps} />
+      <div className="container">
+        <Component {...pageProps} />
+      </div>
       <Navbar />
     </div>
   );
