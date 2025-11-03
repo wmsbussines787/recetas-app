@@ -111,14 +111,20 @@ export default function RecetasPage() {
             <section style={Grid}>
               {filtered.map((r) => (
                 <article key={r.slug} style={Card}>
-                  <img
-                    src={r.image_url || `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/800/500`}
-                    alt={r.title}
-                    style={Img}
-                    loading="lazy"
-                  />
+                  <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ display: "block" }}>
+  <img
+    src={r.image_url || `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/800/500`}
+    alt={r.title}
+    style={Img}
+    loading="lazy"
+  />
+</Link>
                   <div style={Body}>
-                    <div style={Title}>{r.title}</div>
+                    <div style={Title}>
+  <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ color: "inherit", textDecoration: "none" }}>
+    {r.title}
+  </Link>
+</div>
                     {r.description && <p style={{ opacity: 0.85, fontSize: 14 }}>{r.description}</p>}
                     <div style={Meta}>
                       {typeof r.time_total === "number" && <span style={Chip}>⏱ {r.time_total} min</span>}
