@@ -5,6 +5,7 @@ export default function Navbar(){
     <nav className="navbar">
       <Link className="navbtn" href="/">🏠 Inicio</Link>
       <Link className="navbtn" href="/recetas">🥘 Recetas</Link>
+      <Link className="navbtn" href="/favoritos">⭐ Favoritos</Link>
       <Link className="navbtn" href="/new">➕ Nueva</Link>
     </nav>
   );
