@@ -3,7 +3,7 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useFavorites } from "../../lib/useFavorites";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Recipe = {
   id?: string | number;
@@ -12,9 +12,9 @@ type Recipe = {
   description?: string;
   image_url?: string;
   video_url?: string;
-  ingredients?: string[];
-  steps?: string[];
-  tags?: string[];
+  ingredients?: any[];
+  steps?: any[];
+  tags?: any[];
   time_total?: number;
   servings?: number;
   nutrition?: { kcal?: number; carbs?: number; protein?: number; fat?: number };
@@ -22,30 +22,16 @@ type Recipe = {
 
 const fetcher = async (url: string) => {
   const r = await fetch(url);
-  // Si el API devuelve 204 o cuerpo vacío, evita excepción
   try { return await r.json(); } catch { return null; }
 };
 
-// Intenta extraer una receta del response en distintos formatos
 function extractRecipe(resp: any, slug: string | string[] | undefined): Recipe | null {
   const s = Array.isArray(slug) ? slug[0] : slug;
   if (!resp) return null;
-
-  // /api puede responder { ok, data }, { data }, array, objeto
-  const candidate =
-    (resp && resp.data) ? resp.data : resp;
-
-  if (Array.isArray(candidate)) {
-    const found = candidate.find((x: any) => x && x.slug === s);
-    return found ?? null;
-  }
-  if (candidate && typeof candidate === "object" && candidate.slug) {
-    return candidate as Recipe;
-  }
-  // Algunos endpoints devuelven {data:{...recipe}}
-  if (candidate && typeof candidate === "object" && candidate.data && candidate.data.slug) {
-    return candidate.data as Recipe;
-  }
+  const candidate = resp?.data ?? resp;
+  if (Array.isArray(candidate)) return candidate.find((x:any)=>x?.slug===s) ?? null;
+  if (candidate && candidate.slug) return candidate as Recipe;
+  if (candidate?.data?.slug) return candidate.data as Recipe;
   return null;
 }
 
@@ -55,6 +41,7 @@ function toText(v:any){
   if(v && (v.name||v.title||v.text)) return String(v.name||v.title||v.text);
   try{return JSON.stringify(v)}catch{return ""}
 }
+
 export default function RecipeDetail() {
   const router = useRouter();
   const { slug } = router.query;
@@ -68,9 +55,7 @@ export default function RecipeDetail() {
   const { isFav, toggleFav } = useFavorites();
   const [fav, setFav] = useState(false);
 
-  useEffect(() => {
-    setFav(isFav(recipe?.slug));
-  }, [recipe?.slug, isFav]);
+  useEffect(() => { setFav(isFav(recipe?.slug)); }, [recipe?.slug, isFav]);
 
   const hasSteps = !!(recipe?.steps && Array.isArray(recipe.steps) && recipe.steps.length > 0);
   const mediaSrc =
@@ -107,7 +92,6 @@ export default function RecipeDetail() {
     @media (min-width: 1000px) { .fabPill { height: 56px; padding: 0 18px; } }
   `;
 
-  // Estados seguros antes de renderizar contenido complejo
   if (isLoading) return <p>Cargando receta…</p>;
   if (error) return <p style={{ color: "#ff6b6b" }}>Error cargando receta.</p>;
   if (!recipe || typeof recipe.title !== "string" || typeof recipe.slug !== "string") {
@@ -174,8 +158,8 @@ export default function RecipeDetail() {
       {/* Tags */}
       {safeTags.length > 0 && (
         <div className="tags">
-          {{safeTags.map((t:any) => (
-            <span {key={toText(t)}} className="chip">#{toText(t)}</span>
+          {safeTags.map((t:any) => (
+            <span key={toText(t)} className="chip">#{toText(t)}</span>
           ))}
         </div>
       )}
