@@ -49,6 +49,12 @@ function extractRecipe(resp: any, slug: string | string[] | undefined): Recipe |
   return null;
 }
 
+function toText(v:any){
+  if(typeof v==="string") return v;
+  if(typeof v==="number") return String(v);
+  if(v && (v.name||v.title||v.text)) return String(v.name||v.title||v.text);
+  try{return JSON.stringify(v)}catch{return ""}
+}
 export default function RecipeDetail() {
   const router = useRouter();
   const { slug } = router.query;
@@ -145,14 +151,14 @@ export default function RecipeDetail() {
         ) : (
           <img
             src={mediaSrc}
-            alt={recipe.title}
+            alt={toText(recipe.title)}
             style={{ width: "100%", maxHeight: 460, objectFit: "cover", display: "block" }}
           />
         )}
       </motion.div>
 
       {/* Título + meta */}
-      <h1 className="h1">{recipe.title}</h1>
+      <h1 className="h1">{toText(recipe.title)}</h1>
       <p className="sub">
         ⏱ {typeof recipe.time_total === "number" ? recipe.time_total : 15} min · 🍽{" "}
         {typeof recipe.servings === "number" ? recipe.servings : 1} porciones
@@ -168,21 +174,21 @@ export default function RecipeDetail() {
       {/* Tags */}
       {safeTags.length > 0 && (
         <div className="tags">
-          {safeTags.map((t) => (
-            <span key={t} className="chip">#{t}</span>
+          {{safeTags.map((t:any) => (
+            <span {key={toText(t)}} className="chip">#{toText(t)}</span>
           ))}
         </div>
       )}
 
       {/* Descripción */}
-      {recipe.description && <p className="sub" style={{ marginTop: 8 }}>{recipe.description}</p>}
+      {recipe.description && <p className="sub" style={{ marginTop: 8 }}>{toText(recipe.description)}</p>}
 
       {/* Ingredientes */}
       {safeIngredients.length > 0 && (
         <>
           <h3 className="sectionTitle">🛒 Ingredientes</h3>
           <ul style={{ lineHeight: 1.7 }}>
-            {safeIngredients.map((ing, i) => <li key={i}>{ing}</li>)}
+            {safeIngredients.map((ing:any, i:number) => <li key={i}>{toText(ing)}</li>)}
           </ul>
         </>
       )}
@@ -192,8 +198,8 @@ export default function RecipeDetail() {
         <>
           <h3 className="sectionTitle">👨‍🍳 Pasos</h3>
           <ol style={{ lineHeight: 1.8, paddingLeft: 20 }}>
-            {safeSteps.map((step, i) => (
-              <li key={i} style={{ marginBottom: 12 }}>{step}</li>
+            {safeSteps.map((step:any, i:number) => (
+              <li key={i} style={{ marginBottom: 12 }}>{toText(step)}</li>
             ))}
           </ol>
         </>
@@ -204,7 +210,7 @@ export default function RecipeDetail() {
         <button
           className="btn btnAccent"
           onClick={() => {
-            const text = `${recipe.title} - ${window.location.href}`;
+            const text = `${toText(recipe.title)} - ${window.location.href}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
           }}
         >
