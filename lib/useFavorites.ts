@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useCallback } from "react";
 
 const KEY = "fav_slugs_v1";
 
@@ -32,12 +32,19 @@ export function useFavorites() {
     read,
     () => [] // snapshot en SSR
   );
-  const isFav = (slug?: string) => !!slug && favs.includes(slug);
-  const toggleFav = (slug?: string) => {
+  
+  // Usar useCallback para evitar que la función se recree en cada render
+  const isFav = useCallback((slug?: string) => {
+    return !!slug && favs.includes(slug);
+  }, [favs]);
+  
+  // Usar useCallback para la función toggleFav también
+  const toggleFav = useCallback((slug?: string) => {
     if (!slug) return;
     const set = new Set(read());
     set.has(slug) ? set.delete(slug) : set.add(slug);
     write(Array.from(set));
-  };
+  }, []);
+  
   return { favs, isFav, toggleFav };
 }
