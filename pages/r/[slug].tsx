@@ -22,14 +22,30 @@ type Recipe = {
 
 const fetcher = async (url: string) => {
   const r = await fetch(url);
-  try { return await r.json(); } catch { return null; }
+  try { 
+    if (!r.ok) {
+      throw new Error(`HTTP error! status: ${r.status}`);
+    }
+    return await r.json(); 
+  } catch { 
+    return null; 
+  }
 };
 
 function extractRecipe(resp: any, slug: string | string[] | undefined): Recipe | null {
   const s = Array.isArray(slug) ? slug[0] : slug;
   if (!resp) return null;
+  
+  // Decodificar el slug si viene codificado de la URL
+  const decodedSlug = s ? decodeURIComponent(s) : '';
+  
   const candidate = resp?.data ?? resp;
-  if (Array.isArray(candidate)) return candidate.find((x:any)=>x?.slug===s) ?? null;
+  if (Array.isArray(candidate)) {
+    return candidate.find((x:any) => {
+      const recipeSlug = x?.slug ? decodeURIComponent(x.slug) : '';
+      return recipeSlug === decodedSlug;
+    }) ?? null;
+  }
   if (candidate && candidate.slug) return candidate as Recipe;
   if (candidate?.data?.slug) return candidate.data as Recipe;
   return null;
@@ -46,8 +62,11 @@ export default function RecipeDetail() {
   const router = useRouter();
   const { slug } = router.query;
 
+  // Decodificar el slug antes de enviarlo a la API
+  const decodedSlug = slug ? decodeURIComponent(String(slug)) : null;
+  
   const { data: resp, isLoading, error } = useSWR(
-    slug ? `/api/recipes?slug=${encodeURIComponent(String(slug))}` : null,
+    decodedSlug ? `/api/recipes?slug=${encodeURIComponent(decodedSlug)}` : null,
     fetcher
   );
   const recipe: Recipe | null = extractRecipe(resp, slug);
@@ -62,7 +81,7 @@ export default function RecipeDetail() {
     (recipe?.video_url || recipe?.image_url) ||
     `https://picsum.photos/seed/${encodeURIComponent(String(recipe?.slug || "recipe"))}/900/600`;
 
-  const goToCooking = () => recipe && router.push(`/cocina/${recipe.slug}`);
+  const goToCooking = () => recipe && router.push(`/cocina/${encodeURIComponent(recipe.slug)}`);
 
   const css = `
     .hero { position: relative; width: 100%; border-radius: 16px; overflow: hidden; background: var(--card); margin-bottom: 20px; }
@@ -90,12 +109,36 @@ export default function RecipeDetail() {
     }
     .fabPill:hover { filter: brightness(1.05); transform: translateY(-1px); transition: transform .15s ease; }
     @media (min-width: 1000px) { .fabPill { height: 56px; padding: 0 18px; } }
+    .error-message { 
+      padding: 20px; 
+      background: #fee; 
+      border: 1px solid #f88; 
+      border-radius: 8px; 
+      color: #d00; 
+      margin: 20px 0;
+    }
   `;
 
   if (isLoading) return <p>Cargando receta…</p>;
-  if (error) return <p style={{ color: "#ff6b6b" }}>Error cargando receta.</p>;
+  
+  if (error) {
+    return (
+      <div className="error-message">
+        <p><strong>Error cargando receta:</strong></p>
+        <p>No se pudo cargar la receta "{decodedSlug}". Por favor, verifica que la receta existe.</p>
+        <Link href="/recetas" className="btn">← Volver a Recetas</Link>
+      </div>
+    );
+  }
+  
   if (!recipe || typeof recipe.title !== "string" || typeof recipe.slug !== "string") {
-    return <p>No encontrada o formato inválido.</p>;
+    return (
+      <div className="error-message">
+        <p><strong>Receta no encontrada</strong></p>
+        <p>La receta "{decodedSlug}" no existe o tiene un formato inválido.</p>
+        <Link href="/recetas" className="btn">← Volver a Recetas</Link>
+      </div>
+    );
   }
 
   const safeTags = Array.isArray(recipe.tags) ? recipe.tags : [];
