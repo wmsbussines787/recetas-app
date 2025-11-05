@@ -53,6 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rawSlug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
     const slug = typeof rawSlug === 'string' ? rawSlug.trim() : undefined;
 
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate');
+
     if (slug) {
       const { data, error } = await db
         .from('recipes')

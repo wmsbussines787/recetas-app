@@ -34,11 +34,16 @@ function extractRecipe(resp: any, slug: string | string[] | undefined): Recipe |
   return null;
 }
 
-function toText(v:any){
-  if(typeof v==="string") return v;
-  if(typeof v==="number") return String(v);
-  if(v && (v.name||v.title||v.text)) return String(v.name||v.title||v.text);
-  try{return JSON.stringify(v)}catch{return ""}
+function toText(v: any, fallback = '') {
+  if (typeof v === "string" && v.trim()) return v;
+  if (typeof v === "number") return String(v);
+  if (v && (v.name || v.title || v.text)) return String(v.name || v.title || v.text);
+  try {
+    const serialized = JSON.stringify(v);
+    return serialized === "{}" ? fallback : serialized;
+  } catch {
+    return fallback;
+  }
 }
 
 export default function RecipeDetail() {
@@ -53,6 +58,7 @@ export default function RecipeDetail() {
 
   const { favs, toggleFav } = useFavorites();
   const fav = !!(recipe?.slug && favs.includes(recipe.slug));
+  const recipeTitle = toText(recipe?.title, recipe?.slug ?? "Receta");
 
   const hasSteps = !!(recipe?.steps && Array.isArray(recipe.steps) && recipe.steps.length > 0);
   const mediaSrc =
@@ -112,7 +118,9 @@ export default function RecipeDetail() {
       >
         <button
           className="favOverlay"
+          type="button"
           aria-pressed={fav}
+          aria-label={fav ? "Quitar de favoritos" : "Agregar a favoritos"}
           title={fav ? "Quitar de favoritos" : "Agregar a favoritos"}
           onClick={() => {
             toggleFav(recipe.slug);
@@ -127,18 +135,19 @@ export default function RecipeDetail() {
             controls
             playsInline
             style={{ width: "100%", maxHeight: 460, objectFit: "cover", display: "block" }}
+            aria-label={`Video de ${recipeTitle}`}
           />
         ) : (
           <img
             src={mediaSrc}
-            alt={toText(recipe.title)}
+            alt={recipeTitle}
             style={{ width: "100%", maxHeight: 460, objectFit: "cover", display: "block" }}
           />
         )}
       </motion.div>
 
       {/* Título + meta */}
-      <h1 className="h1">{toText(recipe.title)}</h1>
+      <h1 className="h1">{recipeTitle}</h1>
       <p className="sub">
         ⏱ {typeof recipe.time_total === "number" ? recipe.time_total : 15} min · 🍽{" "}
         {typeof recipe.servings === "number" ? recipe.servings : 1} porciones
@@ -146,7 +155,12 @@ export default function RecipeDetail() {
 
       {/* Botón normal Modo Cocina */}
       {hasSteps && (
-        <button onClick={goToCooking} className="btn btnAccent" style={{ width: "100%", marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={goToCooking}
+          className="btn btnAccent"
+          style={{ width: "100%", marginTop: 12 }}
+        >
           👨‍🍳 Modo Cocina
         </button>
       )}
@@ -154,21 +168,21 @@ export default function RecipeDetail() {
       {/* Tags */}
       {safeTags.length > 0 && (
         <div className="tags">
-          {safeTags.map((t:any) => (
-            <span key={toText(t)} className="chip">#{toText(t)}</span>
+          {safeTags.map((t:any, index:number) => (
+            <span key={toText(t, `Etiqueta ${index + 1}`)} className="chip">#{toText(t, `Etiqueta ${index + 1}`)}</span>
           ))}
         </div>
       )}
 
       {/* Descripción */}
-      {recipe.description && <p className="sub" style={{ marginTop: 8 }}>{toText(recipe.description)}</p>}
+      {recipe.description && <p className="sub" style={{ marginTop: 8 }}>{toText(recipe.description, recipeTitle)}</p>}
 
       {/* Ingredientes */}
       {safeIngredients.length > 0 && (
         <>
           <h3 className="sectionTitle">🛒 Ingredientes</h3>
           <ul style={{ lineHeight: 1.7 }}>
-            {safeIngredients.map((ing:any, i:number) => <li key={i}>{toText(ing)}</li>)}
+            {safeIngredients.map((ing:any, i:number) => <li key={i}>{toText(ing, `Ingrediente ${i + 1}`)}</li>)}
           </ul>
         </>
       )}
@@ -179,7 +193,7 @@ export default function RecipeDetail() {
           <h3 className="sectionTitle">👨‍🍳 Pasos</h3>
           <ol style={{ lineHeight: 1.8, paddingLeft: 20 }}>
             {safeSteps.map((step:any, i:number) => (
-              <li key={i} style={{ marginBottom: 12 }}>{toText(step)}</li>
+              <li key={i} style={{ marginBottom: 12 }}>{toText(step, `Paso ${i + 1}`)}</li>
             ))}
           </ol>
         </>
@@ -188,9 +202,10 @@ export default function RecipeDetail() {
       {/* Acciones: Compartir / Volver */}
       <div className="btnRow">
         <button
+          type="button"
           className="btn btnAccent"
           onClick={() => {
-            const text = `${toText(recipe.title)} - ${window.location.href}`;
+            const text = `${recipeTitle} - ${window.location.href}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
           }}
         >
@@ -202,10 +217,17 @@ export default function RecipeDetail() {
       {/* FAB flotante (píldora) solo si hay pasos */}
       {safeSteps.length > 0 && (
         <div className="fabWrap">
-          <div className="fabPill" onClick={goToCooking} aria-label="Modo cocina">
-            <span style={{ fontSize: 22 }}>👨‍🍳</span>
+          <button
+            type="button"
+            className="fabPill"
+            onClick={goToCooking}
+            aria-label="Abrir modo cocina"
+          >
+            <span aria-hidden="true" style={{ fontSize: 22 }}>
+              👨‍🍳
+            </span>
             <span>Modo Cocina</span>
-          </div>
+          </button>
         </div>
       )}
     </>
