@@ -1,192 +1,122 @@
-import { useState, useMemo } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { useFavorites } from "../lib/useFavorites";
+import { useMemo } from "react";
 
 type Recipe = {
-  id: string | number;
   slug: string;
   title: string;
-  image_url?: string;
-  tags?: string[];
+  description?: string | null;
+  image_url?: string | null;
+  tags?: any[] | null;
+  time_total?: number | null;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const r = await fetch(url);
+  // Si la API devolviera HTML por error, evita romper el JSON.parse
+  try { return await r.json(); } catch { return null; }
+};
+
+// Normaliza a array
+function toArray(resp: any): Recipe[] {
+  if (!resp) return [];
+  const data = resp?.data ?? resp;
+  if (Array.isArray(data)) return data as Recipe[];
+  if (data && typeof data === "object") return [data as Recipe];
+  return [];
+}
+
+function toText(v: any) {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (v && (v.name || v.title || v.text)) return String(v.name || v.title || v.text);
+  return "";
+}
 
 export default function RecetasPage() {
-  const { data, error, isLoading } = useSWR<Recipe[]>("/api/recipes", fetcher);
-  const { isFav, toggleFav } = useFavorites();
+  const { data: resp, error, isLoading } = useSWR("/api/recipes", fetcher, {
+    revalidateOnFocus: false,
+  });
 
-  const [search, setSearch] = useState("");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const list = useMemo(() => toArray(resp), [resp]);
 
-  const allTags = useMemo(() => {
-    const t = new Set<string>();
-    data?.forEach((r) => r.tags?.forEach((x) => t.add(x)));
-    return [...t];
-  }, [data]);
-
-  const list = useMemo(() => {
-    if (!data) return [];
-    return data.filter((r) => {
-      const s = search.toLowerCase();
-      const matchSearch =
-        !s ||
-        r.title.toLowerCase().includes(s) ||
-        (r.tags || []).some((x) => x.toLowerCase().includes(s));
-      const matchTag = !activeTag || r.tags?.includes(activeTag);
-      return matchSearch && matchTag;
-    });
-  }, [data, search, activeTag]);
+  if (error) return <p style={{ padding: 24, color: "#e11d48" }}>Error cargando recetas.</p>;
+  if (isLoading) return <p style={{ padding: 24 }}>Cargando…</p>;
 
   return (
-    <>
-      <style jsx global>{`
-        .card { position: relative; }
-        .favBtn {
-          position: absolute; top: 8px; right: 8px;
-          width: 36px; height: 36px; border-radius: 999px;
-          display: grid; place-items: center; font-size: 18px;
-          border: 1px solid var(--border); background: rgba(0,0,0,.55);
-          color: #fff; cursor: pointer;
-        }
-        @media (prefers-color-scheme: light){
-          .favBtn { background: rgba(255,255,255,.7); color: #111; }
-        }
-      `}</style>
+    <div style={{ padding: "24px", maxWidth: 1000, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Recetas</h1>
+      <p style={{ opacity: 0.8, marginBottom: 16 }}>
+        Total: {list.length}
+      </p>
 
-      <h1 className="h1">Recetas</h1>
-      <p className="sub">Explora, busca o crea nuevas recetas</p>
-
-      <input
-        placeholder="Buscar receta..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "12px 16px",
-          borderRadius: 12,
-          border: "1px solid var(--border)",
-          background: "var(--card)",
-          color: "var(--fg)",
-          marginBottom: 14,
-        }}
-      />
-
-      {/* TAGS */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        {allTags.map((tag) => {
-          const active = activeTag === tag;
-          return (
-            <button
-              key={tag}
-              onClick={() => setActiveTag(active ? null : tag)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 20,
-                background: active ? "var(--accent)" : "var(--chip)",
-                color: active ? "#fff" : "var(--fg)",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 13,
-              }}
-            >
-              #{tag}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: 18,
-        }}
-      >
-        {isLoading &&
-          Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: 180,
-                borderRadius: 14,
-                background: "var(--card)",
-                opacity: 0.3,
-              }}
-            />
-          ))}
-
-        {list.map((r) => {
-          const fav = isFav(r.slug);
-          return (
-            <motion.div
-              key={r.id ?? r.slug}
-              whileHover={{ scale: 1.03 }}
-              transition={{ duration: 0.2 }}
-              className="card"
-              style={{
-                borderRadius: 14,
-                overflow: "hidden",
-                background: "var(--card)",
-                boxShadow: "var(--shadow)",
-              }}
-            >
-              <Link href={`/r/${encodeURIComponent(r.slug)}`} style={{ display: "block" }}>
-                <img
-                  src={
-                    r.image_url ||
-                    `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/400/300`
-                  }
-                  alt={r.title}
-                  style={{ width: "100%", height: 180, objectFit: "cover" }}
-                />
-                <div style={{ padding: 14, fontWeight: 600 }}>{r.title}</div>
-              </Link>
-
-              {/* ⭐ botón toggle favoritos */}
-              <button
-                className="favBtn"
-                aria-pressed={fav}
-                title={fav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                onClick={(e) => {
-                  e.preventDefault(); // evita navegar
-                  toggleFav(r.slug);
+      {list.length === 0 ? (
+        <div style={{ opacity: 0.8 }}>
+          No hay recetas. Crea una en <Link href="/new">/new</Link>.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {list.map((r) => {
+            const img =
+              r.image_url ||
+              `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/600/400`;
+            const tags = Array.isArray(r.tags) ? r.tags : [];
+            return (
+              <Link
+                key={r.slug}
+                href={`/r/${encodeURIComponent(r.slug)}`}
+                style={{
+                  display: "block",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  textDecoration: "none",
+                  color: "inherit",
+                  background: "var(--card, #fff)",
                 }}
               >
-                {fav ? "⭐" : "☆"}
-              </button>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* EMPTY STATE */}
-      {!isLoading && list.length === 0 && (
-        <p style={{ opacity: 0.6, textAlign: "center", marginTop: 40 }}>
-          No hay recetas que coincidan.
-        </p>
+                <img
+                  src={img}
+                  alt={toText(r.title)}
+                  style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }}
+                />
+                <div style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 700 }}>{toText(r.title)}</div>
+                  {r.description && (
+                    <div style={{ opacity: 0.8, fontSize: 14, marginTop: 4 }}>
+                      {toText(r.description)}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    {tags.slice(0, 3).map((t: any, i: number) => (
+                      <span
+                        key={i}
+                        style={{
+                          border: "1px solid #d1d5db",
+                          borderRadius: 999,
+                          padding: "2px 8px",
+                          fontSize: 12,
+                        }}
+                      >
+                        #{toText(t)}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+                    ⏱ {typeof r.time_total === "number" ? r.time_total : 15} min
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       )}
-
-      {/* FAB Nueva */}
-      <Link
-        href="/new"
-        style={{
-          position: "fixed",
-          bottom: 100,
-          right: 22,
-          background: "var(--accent)",
-          color: "#fff",
-          padding: "16px 20px",
-          borderRadius: "999px",
-          fontSize: 26,
-          boxShadow: "var(--shadow)",
-        }}
-      >
-        +
-      </Link>
-    </>
+    </div>
   );
 }
