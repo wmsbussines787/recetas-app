@@ -15,7 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json(data);
   }
   if (req.method === 'GET') {
-    const slug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
+    const rawSlug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
+    const slug = typeof rawSlug === 'string' ? rawSlug.trim() : undefined;
 
     if (slug) {
       const { data, error } = await db
@@ -33,6 +34,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);
   }
-  res.setHeader('Allow', ['GET','POST']);
+  res.setHeader('Allow', ['GET', 'POST']);
   return res.status(405).end('Method Not Allowed');
 }
