@@ -3,7 +3,6 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useFavorites } from "../../lib/useFavorites";
-import { useEffect, useState } from "react";
 
 type Recipe = {
   id?: string | number;
@@ -52,10 +51,8 @@ export default function RecipeDetail() {
   );
   const recipe: Recipe | null = extractRecipe(resp, slug);
 
-  const { isFav, toggleFav } = useFavorites();
-  const [fav, setFav] = useState(false);
-
-  useEffect(() => { setFav(isFav(recipe?.slug)); }, [recipe?.slug, isFav]);
+  const { favs, toggleFav } = useFavorites();
+  const fav = !!(recipe?.slug && favs.includes(recipe.slug));
 
   const hasSteps = !!(recipe?.steps && Array.isArray(recipe.steps) && recipe.steps.length > 0);
   const mediaSrc =
@@ -119,7 +116,6 @@ export default function RecipeDetail() {
           title={fav ? "Quitar de favoritos" : "Agregar a favoritos"}
           onClick={() => {
             toggleFav(recipe.slug);
-            setFav(isFav(recipe.slug));
           }}
         >
           {fav ? "⭐" : "☆"}
