@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 type Recipe = {
   slug: string;
@@ -34,11 +34,44 @@ function toText(v: any) {
 }
 
 export default function RecetasPage() {
-  const { data: resp, error, isLoading } = useSWR("/api/recipes", fetcher, {
+  const { data: resp, error, isLoading, mutate } = useSWR("/api/recipes", fetcher, {
     revalidateOnFocus: false,
   });
 
   const list = useMemo(() => toArray(resp), [resp]);
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+
+  async function handleDelete(slug: string) {
+    if (!slug) return;
+    if (typeof window !== "undefined" && !window.confirm("¿Eliminar esta receta?")) return;
+
+    setDeletingSlug(slug);
+    try {
+      const res = await fetch(`/api/recipes?slug=${encodeURIComponent(slug)}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        let message = "No se pudo eliminar la receta.";
+        try {
+          const body = await res.json();
+          if (body?.error) message = String(body.error);
+        } catch {
+          // ignore JSON parse errors
+        }
+        throw new Error(message);
+      }
+
+      await mutate();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      if (typeof window !== "undefined") {
+        window.alert(message);
+      }
+    } finally {
+      setDeletingSlug((current) => (current === slug ? null : current));
+    }
+  }
 
   if (error) return <p style={{ padding: 24, color: "#e11d48" }}>Error cargando recetas.</p>;
   if (isLoading) return <p style={{ padding: 24 }}>Cargando…</p>;
@@ -67,52 +100,85 @@ export default function RecetasPage() {
               r.image_url ||
               `https://picsum.photos/seed/${encodeURIComponent(r.slug)}/600/400`;
             const tags = Array.isArray(r.tags) ? r.tags : [];
+            const isDeleting = deletingSlug === r.slug;
             return (
-              <Link
+              <div
                 key={r.slug}
-                href={`/r/${encodeURIComponent(r.slug)}`}
                 style={{
-                  display: "block",
+                  position: "relative",
                   border: "1px solid #e5e7eb",
                   borderRadius: 12,
                   overflow: "hidden",
-                  textDecoration: "none",
-                  color: "inherit",
                   background: "var(--card, #fff)",
                 }}
               >
-                <img
-                  src={img}
-                  alt={toText(r.title)}
-                  style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }}
-                />
-                <div style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 700 }}>{toText(r.title)}</div>
-                  {r.description && (
-                    <div style={{ opacity: 0.8, fontSize: 14, marginTop: 4 }}>
-                      {toText(r.description)}
+                <Link
+                  href={`/r/${encodeURIComponent(r.slug)}`}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    color: "inherit",
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={toText(r.title)}
+                    style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }}
+                  />
+                  <div style={{ padding: 12 }}>
+                    <div style={{ fontWeight: 700 }}>{toText(r.title)}</div>
+                    {r.description && (
+                      <div style={{ opacity: 0.8, fontSize: 14, marginTop: 4 }}>
+                        {toText(r.description)}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {tags.slice(0, 3).map((t: any, i: number) => (
+                        <span
+                          key={i}
+                          style={{
+                            border: "1px solid #d1d5db",
+                            borderRadius: 999,
+                            padding: "2px 8px",
+                            fontSize: 12,
+                          }}
+                        >
+                          #{toText(t)}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                    {tags.slice(0, 3).map((t: any, i: number) => (
-                      <span
-                        key={i}
-                        style={{
-                          border: "1px solid #d1d5db",
-                          borderRadius: 999,
-                          padding: "2px 8px",
-                          fontSize: 12,
-                        }}
-                      >
-                        #{toText(t)}
-                      </span>
-                    ))}
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+                      ⏱ {typeof r.time_total === "number" ? r.time_total : 15} min
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-                    ⏱ {typeof r.time_total === "number" ? r.time_total : 15} min
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void handleDelete(r.slug);
+                  }}
+                  disabled={isDeleting}
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "6px 10px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: isDeleting ? "not-allowed" : "pointer",
+                    background: isDeleting ? "#d1d5db" : "#ef4444",
+                    color: "white",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  {isDeleting ? "Eliminando…" : "Eliminar"}
+                </button>
+              </div>
             );
           })}
         </div>

@@ -25,6 +25,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) return res.status(400).json({ error: error.message });
     return res.status(201).json(data);
   }
+  if (req.method === 'DELETE') {
+    const db = getDb(res);
+    if (!db) return;
+
+    const rawSlug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
+    const slug = typeof rawSlug === 'string' ? rawSlug.trim() : undefined;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'slug es requerido' });
+    }
+
+    const { error, count } = await db
+      .from('recipes')
+      .delete({ count: 'exact' })
+      .eq('slug', slug);
+
+    if (error) return res.status(400).json({ error: error.message });
+    if (!count) return res.status(404).json({ error: 'Receta no encontrada' });
+
+    return res.status(204).end(null);
+  }
   if (req.method === 'GET') {
     const db = getDb(res);
     if (!db) return;
@@ -48,6 +69,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);
   }
-  res.setHeader('Allow', ['GET', 'POST']);
+  res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
   return res.status(405).end('Method Not Allowed');
 }
