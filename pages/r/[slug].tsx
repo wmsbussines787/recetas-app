@@ -74,7 +74,12 @@ export default function RecipeDetail() {
   const { isFav, toggleFav } = useFavorites();
   const [fav, setFav] = useState(false);
 
-  useEffect(() => { setFav(isFav(recipe?.slug)); }, [recipe?.slug, isFav]);
+  // FIX: Remover isFav de las dependencias para evitar bucle infinito
+  useEffect(() => {
+    if (recipe?.slug) {
+      setFav(isFav(recipe.slug));
+    }
+  }, [recipe?.slug]); // Solo depende del slug de la receta
 
   const hasSteps = !!(recipe?.steps && Array.isArray(recipe.steps) && recipe.steps.length > 0);
   const mediaSrc =
@@ -82,6 +87,13 @@ export default function RecipeDetail() {
     `https://picsum.photos/seed/${encodeURIComponent(String(recipe?.slug || "recipe"))}/900/600`;
 
   const goToCooking = () => recipe && router.push(`/cocina/${encodeURIComponent(recipe.slug)}`);
+
+  const handleToggleFav = () => {
+    if (recipe?.slug) {
+      toggleFav(recipe.slug);
+      setFav(isFav(recipe.slug)); // Actualizar estado local inmediatamente
+    }
+  };
 
   const css = `
     .hero { position: relative; width: 100%; border-radius: 16px; overflow: hidden; background: var(--card); margin-bottom: 20px; }
@@ -160,10 +172,7 @@ export default function RecipeDetail() {
           className="favOverlay"
           aria-pressed={fav}
           title={fav ? "Quitar de favoritos" : "Agregar a favoritos"}
-          onClick={() => {
-            toggleFav(recipe.slug);
-            setFav(isFav(recipe.slug));
-          }}
+          onClick={handleToggleFav}
         >
           {fav ? "⭐" : "☆"}
         </button>
