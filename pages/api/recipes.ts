@@ -1,13 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-const db = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getDb(res: NextApiResponse) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    console.error('Supabase environment variables are not configured.');
+    res.status(500).json({ error: 'Configuración de Supabase faltante' });
+    return null;
+  }
+
+  return createClient(url, key);
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
+    const db = getDb(res);
+    if (!db) return;
+
     const b = req.body as { slug?: string; title?: string } | null;
     if (!b?.slug || !b?.title) return res.status(400).json({ error: 'slug y title son requeridos' });
     const { data, error } = await db.from('recipes').insert([b]).select().single();
@@ -15,6 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json(data);
   }
   if (req.method === 'GET') {
+    const db = getDb(res);
+    if (!db) return;
+
     const rawSlug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
     const slug = typeof rawSlug === 'string' ? rawSlug.trim() : undefined;
 
