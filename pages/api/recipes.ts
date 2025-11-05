@@ -14,11 +14,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) return res.status(400).json({ error: error.message });
     return res.status(201).json(data);
   }
+  
   if (req.method === 'GET') {
-    const { data, error } = await db.from('recipes').select('*').order('created_at', { ascending: false });
+    const { slug } = req.query;
+    
+    // Si se proporciona un slug, buscar la receta específica
+    if (slug && typeof slug === 'string') {
+      const decodedSlug = decodeURIComponent(slug);
+      const { data, error } = await db
+        .from('recipes')
+        .select('*')
+        .eq('slug', decodedSlug)
+        .single();
+      
+      if (error) {
+        // Si no se encuentra la receta, devolver un error 404
+        if (error.code === 'PGRST116') {
+          return res.status(404).json({ error: 'Receta no encontrada' });
+        }
+        return res.status(400).json({ error: error.message });
+      }
+      
+      return res.status(200).json(data);
+    }
+    
+    // Si no se proporciona slug, devolver todas las recetas
+    const { data, error } = await db
+      .from('recipes')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);
   }
+  
   res.setHeader('Allow', ['GET','POST']);
   return res.status(405).end('Method Not Allowed');
 }
