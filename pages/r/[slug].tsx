@@ -20,8 +20,27 @@ type Recipe = {
 };
 
 const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  try { return await r.json(); } catch { return null; }
+  const response = await fetch(url);
+  let payload: any = null;
+  try {
+    payload = await response.json();
+  } catch {
+    // ignoramos el error de parseo para evaluar el estado HTTP
+  }
+
+  if (!response.ok) {
+    const message =
+      (payload && typeof payload === "object" && "error" in payload && payload.error) ||
+      response.statusText ||
+      "Error al cargar la receta";
+    throw new Error(String(message));
+  }
+
+  if (payload == null) {
+    throw new Error("Respuesta inválida del servidor");
+  }
+
+  return payload;
 };
 
 function extractRecipe(resp: any, slug: string | string[] | undefined): Recipe | null {
@@ -96,7 +115,10 @@ export default function RecipeDetail() {
   `;
 
   if (isLoading) return <p>Cargando receta…</p>;
-  if (error) return <p style={{ color: "#ff6b6b" }}>Error cargando receta.</p>;
+  if (error) {
+    const message = error instanceof Error ? error.message : "Error cargando receta.";
+    return <p style={{ color: "#ff6b6b" }}>{message}</p>;
+  }
   if (!recipe || typeof recipe.title !== "string" || typeof recipe.slug !== "string") {
     return <p>No encontrada o formato inválido.</p>;
   }

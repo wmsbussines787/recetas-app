@@ -12,9 +12,27 @@ type Recipe = {
 };
 
 const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  // Si la API devolviera HTML por error, evita romper el JSON.parse
-  try { return await r.json(); } catch { return null; }
+  const response = await fetch(url);
+  let payload: any = null;
+  try {
+    payload = await response.json();
+  } catch {
+    // Ignoramos errores de parseo pero dejamos que el flujo continúe
+  }
+
+  if (!response.ok) {
+    const message =
+      (payload && typeof payload === "object" && "error" in payload && payload.error) ||
+      response.statusText ||
+      "Error al cargar recetas";
+    throw new Error(String(message));
+  }
+
+  if (payload == null) {
+    throw new Error("Respuesta inválida del servidor");
+  }
+
+  return payload;
 };
 
 // Normaliza a array
@@ -73,7 +91,10 @@ export default function RecetasPage() {
     }
   }
 
-  if (error) return <p style={{ padding: 24, color: "#e11d48" }}>Error cargando recetas.</p>;
+  if (error) {
+    const message = error instanceof Error ? error.message : "Error cargando recetas.";
+    return <p style={{ padding: 24, color: "#e11d48" }}>{message}</p>;
+  }
   if (isLoading) return <p style={{ padding: 24 }}>Cargando…</p>;
 
   return (
