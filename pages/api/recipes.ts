@@ -15,6 +15,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json(data);
   }
   if (req.method === 'GET') {
+    const slug = Array.isArray(req.query.slug) ? req.query.slug[0] : req.query.slug;
+
+    if (slug) {
+      const { data, error } = await db
+        .from('recipes')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error) return res.status(400).json({ error: error.message });
+      if (!data) return res.status(404).json({ error: 'Receta no encontrada' });
+      return res.status(200).json(data);
+    }
+
     const { data, error } = await db.from('recipes').select('*').order('created_at', { ascending: false });
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);
